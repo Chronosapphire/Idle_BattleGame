@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Idle Battle Game</title>
+</head>
+<body>
+  <div id="app">
+    <h1>🏹 Idle Battle Game</h1>
+
+    <button @click="showInventory = !showInventory">
+      {{ showInventory ? "Hide Weaponry" : "Show Weaponry" }}
+    </button>
+
+    <ul v-if="showInventory">
+        <li 
+        v-for="(item, index) in inventory" 
+        :key="index" 
+        @click="buyItem(index)"
+        >
+        🪄 {{ item.name }} – 💰 {{ item.price }} gold
+        </li>
+
+    </ul>
+    <p v-if="inventory.length === 0">The inventory is empty. 🕸️</p>
+
+    <button @click="showPetShop = !showPetShop">
+      {{ showPetShop ? "Hide Pet Shop" : "Show Pet Shop" }}
+    </button>
+
+    <ul v-if="showPetShop">
+        <li v-for="(item, index) in PetShop"
+        :key="index"
+        @click="buyPet(index)"
+        >
+        🪄 {{ item.name }} – 💰 {{ item.price }} gold
+        </li>
+        
+    </ul>
+    <p v-if="PetShop.length === 0">The PetShop is empty. 🕸️</p>
+
+    
+
+    <h2>Your Inventory. 💰{{ userGold }}</h2>
+
+    <ul>
+        <li v-for="(item,index) in userInventory" :key="index">
+            🎒 {{ item.name }}
+        </li>
+        
+
+    </ul>
+
+    <h2>Your Pets 🐾</h2>
+    <ul>
+    <li v-for="(pet, index) in userPets" :key="index">
+        🐕 {{ pet.name }} (+{{ pet.passive }}/sec)
+    </li>
+    </ul>
+
+    
+    <button @click="userGold += goldPerClick">Click to earn 💰 Battle Power: {{goldPerClick}}</button>
+    
+    <h2>🏰 Level: {{ level }} <span v-if="isBossLevel">[BOSS]</span></h2>
+
+    <h2>🪵 Training Dummy</h2>
+    <p>HP: {{ dummyHP }} / {{ dummyMaxHP }}</p>
+
+    <p v-if="isBossLevel">⏳ Time Left: {{ timer }} seconds</p>
+
+    <button @click="attackDummy">Attack Dummy 💥</button>
+
+
+
+  </div>
+  
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+
+    createApp({
+      setup() {
+        const showInventory = ref(false);
+        const showPetShop = ref(false);
+        const userGold = ref(1000);
+        const goldPerClick = ref(1);
+
+        const inventory = ref([
+        { name: "Iron Sword", price: 10, power: 1 },
+        { name: "Bronze Sword", price: 50, power: 2 },
+        { name: "Sharp Sword", price: 500, power: 5 },
+        { name: "Platinum Sword", price: 5000, power: 10 },
+        { name: "Diamond Sword", price: 50000, power: 100 },
+        { name: "Ultimate Sword", price: 100000, power: 1000 },
+        { name: "Master Sword", price: 10000000000000, power: 10000 },
+        ]);
+
+        const PetShop = ref([
+        { name: "Puppy", price: 1001, passive: 1 },
+        { name: "Cat", price: 5000, passive: 2 },
+        { name: "Parrot", price: 10000, passive: 5 },
+        { name: "Eagle", price: 50000, passive: 10 },
+        { name: "Lion", price: 100000, passive: 100 },
+        { name: "Magic Frog", price: 500000, passive: 1000 },
+        { name: "Unicorn", price: 10010010010010012020, passive: 10000 },
+        ]);
+
+        const userInventory = ref([]);
+        const userPets = ref([]); // 🐾 Player's pets
+
+        function buyItem(index) {
+            const item = inventory.value[index];
+            if (userGold.value >= item.price) {
+            userGold.value -= item.price;
+            inventory.value.splice(index, 1);
+            userInventory.value.push(item);// remove from shop
+            goldPerClick.value += item.power;
+        }   else {
+            alert("Not enough gold! 🪙");
+    }
+  } 
+    function buyPet(index) {
+        const pet = PetShop.value[index];
+        if (userGold.value >= pet.price) {
+          userGold.value -= pet.price;
+          userPets.value.push(pet);
+          PetShop.value.splice(index, 1);
+        } else {
+          alert("Not enough gold to adopt this pet! 🐾");
+        }
+      }
+
+      // Passive income system
+      onMounted(() => {
+        setInterval(() => {
+          const passiveIncome = userPets.value.reduce(
+            (total, pet) => total + pet.passive,
+            0
+          );
+          userGold.value += passiveIncome;
+        }, 1000);
+      });
+
+      const level = ref(1);
+      const dummyHP = ref(50);
+      const dummyMaxHP = ref(50);
+      const dummyReward = ref(25);
+      const timer = ref(0);
+      const isBossLevel = computed(() => level.value % 10 === 0);
+      let timerInterval = null;
+
+
+      function attackDummy() {
+  dummyHP.value -= goldPerClick.value;
+
+  if (dummyHP.value <= 0) {
+    userGold.value += dummyReward.value;
+    level.value += 1;
+
+    // Scale difficulty
+    dummyMaxHP.value = 50 + level.value * 10;
+    dummyReward.value = 25 + level.value * 5;
+    dummyHP.value = dummyMaxHP.value;
+
+    // Boss stage? Start timer
+    if (isBossLevel.value) {
+      startBossTimer();
+    } else {
+      stopBossTimer(); // make sure timer is stopped
+    }
+  }
+}
+    function startBossTimer() {
+  timer.value = 10; // 10 seconds to beat the boss
+  stopBossTimer(); // clear old timer if exists
+
+  timerInterval = setInterval(() => {
+    timer.value--;
+    if (timer.value <= 0) {
+      alert("⏳ Time's up! The boss dummy has repelled you!");
+      level.value = Math.max(1, level.value - 10); // drop 10 levels
+      dummyMaxHP.value = 50 + level.value * 10;
+      dummyReward.value = 25 + level.value * 5;
+      dummyHP.value = dummyMaxHP.value;
+      stopBossTimer();
+    }
+  }, 1000);
+}
+
+function stopBossTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    timer.value = 0;
+  }
+}
+
+
+      
+
+
+
+        
+
+        return {
+            showInventory,
+            showPetShop,
+            inventory,
+            PetShop,
+            userGold,
+            goldPerClick,
+            buyItem,
+            buyPet,
+            userInventory,
+            userPets,
+            stopBossTimer,
+            startBossTimer,
+            
+            
+            level,
+            dummyHP,
+            dummyMaxHP,
+            dummyReward,
+            attackDummy,
+            isBossLevel,
+            timer};
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
